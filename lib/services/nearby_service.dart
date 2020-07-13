@@ -8,7 +8,7 @@ class NearbyService extends ChangeNotifier {
   String _username;
   String get username => _username ??= uniqueUsername();
 
-  List<Map<String, dynamic>> _advertisers;
+  List<Map<String, dynamic>> _advertisers = [];
   List<Map<String, dynamic>> get advertisers => _advertisers;
 
   /// Initializes necessary variables and starts looking for active advertisers nearby

@@ -34,7 +34,10 @@ class MainView extends StatefulWidget {
 
 class _MainViewState extends State<MainView> {
   final GlobalKey<InnerDrawerState> _drawerKey = GlobalKey<InnerDrawerState>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  
   bool _showDiscoveryLoadingBar = false;
+  bool _advertisingStatus = false;
 
   void _toggleDrawer() {
     _drawerKey.currentState.toggle();
@@ -49,22 +52,80 @@ class _MainViewState extends State<MainView> {
   /// Hooks into the NearbyService to check for and activate the necessary permissions required to
   /// start looking for and creating connections with other devices
   checkAndHandlePermissions() async {
-    NearbyService nearbyService = NearbyService();
+    NearbyService nearbyService =
+        Provider.of<NearbyService>(context, listen: false);
     int permissionsStatus = await nearbyService.checkPermissions();
     nearbyService.enablePermissions(permissionsStatus);
     await nearbyService.checkLocationEnabled();
   }
 
-  initiateDiscovery() {
+  initiateDiscovery() async {
     setState(() {
       this._showDiscoveryLoadingBar = true;
     });
+
+    final NearbyService nearbyService =
+        Provider.of<NearbyService>(context, listen: false);
+    try {
+      await Nearby().startDiscovery(
+        nearbyService.username,
+        Strategy.P2P_STAR,
+        onEndpointFound: (String id, String userName, String serviceId) {
+          // called when an advertiser is found
+        },
+        onEndpointLost: (String id) {
+          //called when an advertiser is lost (only if we weren't connected to it )
+        },
+        serviceId: "com.rohankapur.hyperdrive", // uniquely identifies your app
+      );
+    } catch (e) {
+      print(e);
+      this._scaffoldKey.currentState.showSnackBar(SnackBar(
+            content: Text(e.toString()),
+          ));
+    }
   }
 
   stopDiscovery() {
     setState(() {
       this._showDiscoveryLoadingBar = false;
     });
+    Nearby().stopDiscovery();
+  }
+
+  initiateAdvertising() async {
+    print('Started Advertising...');
+    setState(() {
+      this._advertisingStatus = true;
+    });
+
+    final NearbyService nearbyService = Provider.of<NearbyService>(context, listen: false);
+    try {
+    bool a = await Nearby().startAdvertising(
+        nearbyService.username,
+        Strategy.P2P_STAR,
+        onConnectionInitiated: (String id,ConnectionInfo info) {
+        // Called whenever a discoverer requests connection 
+        },
+        onConnectionResult: (String id,Status status) {
+        // Called when connection is accepted/rejected
+        },
+        onDisconnected: (String id) {
+        // Callled whenever a discoverer disconnects from advertiser
+        },
+        serviceId: "com.yourdomain.appname", // uniquely identifies your app
+    );
+} catch (exception) {
+    // platform exceptions like unable to start bluetooth or insufficient permissions 
+}
+  }
+
+  stopAdvertising() async {
+    print('Stopped Advertising...');
+    setState(() {
+      this._advertisingStatus = false;
+    });
+    Nearby().stopAdvertising();
   }
 
   _buildDiscoveryProgressBar() {
@@ -72,6 +133,28 @@ class _MainViewState extends State<MainView> {
       return LinearProgressIndicator();
     } else {
       return SizedBox(height: 6);
+    }
+  }
+
+  _buildActiveDeviceView() {
+    buildText() {
+      if (this._showDiscoveryLoadingBar) {
+        return 'Looking for nearby devices';
+      } else {
+        return 'Turn on discovery to find nearby devices.';
+      }
+    }
+
+    final NearbyService nearbyService = Provider.of<NearbyService>(context);
+
+    if (nearbyService.advertisers.length == 0) {
+      return Expanded(
+        child: Center(
+          child: Text(buildText()),
+        ),
+      );
+    } else {
+      return Container();
     }
   }
 
@@ -115,6 +198,7 @@ class _MainViewState extends State<MainView> {
         ),
       ),
       scaffold: Scaffold(
+        key: _scaffoldKey,
         appBar: AppBar(
           title: Text('Hyperdrive'),
           centerTitle: true,
@@ -133,7 +217,7 @@ class _MainViewState extends State<MainView> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  Text('Show my device nearby'),
+                  Text('Discover nearby devices'),
                   Switch(
                     value: this._showDiscoveryLoadingBar,
                     onChanged: (val) {
@@ -147,16 +231,37 @@ class _MainViewState extends State<MainView> {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Text('Show my device to others nearby'),
+                  Switch(
+                    value: this._advertisingStatus,
+                    onChanged: (val) {
+                      if (this._advertisingStatus) {
+                        stopAdvertising();
+                      } else {
+                        initiateAdvertising();
+                      }
+                    },
+                  )
+                ],
+              ),
+            ),
             Divider(color: Colors.black),
             SizedBox(height: 16),
             Padding(
-              padding: const EdgeInsets.fromLTRB(8,0,8,0),
+              padding: const EdgeInsets.fromLTRB(8, 0, 24, 0),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  Text('Nearby Devices', textScaleFactor: 1.3)
+                  Text('Nearby Devices', textScaleFactor: 1.25)
                 ],
               ),
-            )
+            ),
+            _buildActiveDeviceView()
           ],
         ),
       ),
