@@ -35,7 +35,7 @@ class MainView extends StatefulWidget {
 class _MainViewState extends State<MainView> {
   final GlobalKey<InnerDrawerState> _drawerKey = GlobalKey<InnerDrawerState>();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  
+
   bool _showDiscoveryLoadingBar = false;
   bool _advertisingStatus = false;
 
@@ -94,30 +94,32 @@ class _MainViewState extends State<MainView> {
   }
 
   initiateAdvertising() async {
-    print('Started Advertising...');
     setState(() {
       this._advertisingStatus = true;
     });
 
-    final NearbyService nearbyService = Provider.of<NearbyService>(context, listen: false);
+    final NearbyService nearbyService =
+        Provider.of<NearbyService>(context, listen: false);
     try {
-    bool a = await Nearby().startAdvertising(
+      await Nearby().startAdvertising(
         nearbyService.username,
         Strategy.P2P_STAR,
-        onConnectionInitiated: (String id,ConnectionInfo info) {
-        // Called whenever a discoverer requests connection 
+        onConnectionInitiated: (String id, ConnectionInfo info) {
+          // Called whenever a discoverer requests connection
         },
-        onConnectionResult: (String id,Status status) {
-        // Called when connection is accepted/rejected
+        onConnectionResult: (String id, Status status) {
+          // Called when connection is accepted/rejected
         },
         onDisconnected: (String id) {
-        // Callled whenever a discoverer disconnects from advertiser
+          // Callled whenever a discoverer disconnects from advertiser
         },
-        serviceId: "com.yourdomain.appname", // uniquely identifies your app
-    );
-} catch (exception) {
-    // platform exceptions like unable to start bluetooth or insufficient permissions 
-}
+        serviceId: "com.rohankapur.hyperdrive", // uniquely identifies your app
+      );
+    } catch (e) {
+      this._scaffoldKey.currentState.showSnackBar(SnackBar(
+            content: Text(e.toString()),
+          ));
+    }
   }
 
   stopAdvertising() async {
