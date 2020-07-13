@@ -3,13 +3,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 import 'dart:math';
 import 'package:provider/provider.dart';
+import 'package:hyperdrive/models/advertiser_model.dart';
 
 class NearbyService extends ChangeNotifier {
   String _username;
   String get username => _username ??= uniqueUsername();
 
-  List<Map<String, dynamic>> _advertisers = [];
-  List<Map<String, dynamic>> get advertisers => _advertisers;
+  List<Advertiser> _advertisers = [];
+  List<Advertiser> get advertisers => _advertisers;
 
   /// Initializes necessary variables and starts looking for active advertisers nearby
   NearbyService() {
@@ -57,6 +58,23 @@ class NearbyService extends ChangeNotifier {
     if (!locationEnabled) {
       Nearby().enableLocationServices();
     }
+  }
+
+  addAdvertiserToList(Advertiser advertiser) {
+    this._advertisers.add(advertiser);
+    notifyListeners();
+  }
+
+  removeAdvertiserFromList(String id) {
+    List<Advertiser> newList = new List();
+    
+    for (var i = 0; i < this._advertisers.length; i++) {
+      if (this._advertisers[i].id != id) {
+        newList.add(this._advertisers[i]);
+      }
+    }
+    this._advertisers = newList;
+    notifyListeners();
   }
 
   /// Sets up a unique username for the user

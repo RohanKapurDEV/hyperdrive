@@ -3,6 +3,7 @@ import 'package:flutter_inner_drawer/inner_drawer.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 import 'package:provider/provider.dart';
 import 'package:hyperdrive/services/nearby_service.dart';
+import 'package:hyperdrive/models/models.dart';
 
 void main() {
   runApp(MyApp());
@@ -37,7 +38,7 @@ class _MainViewState extends State<MainView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   bool _showDiscoveryLoadingBar = false;
-  bool _advertisingStatus = false;
+  bool _advertisingStatus = false;  // Not reflected within any MainView widgets, used internally
 
   void _toggleDrawer() {
     _drawerKey.currentState.toggle();
@@ -59,6 +60,7 @@ class _MainViewState extends State<MainView> {
     await nearbyService.checkLocationEnabled();
   }
 
+  /// Initiates nearby device discovery - discovers nearby advertisers
   initiateDiscovery() async {
     setState(() {
       this._showDiscoveryLoadingBar = true;
@@ -71,10 +73,15 @@ class _MainViewState extends State<MainView> {
         nearbyService.username,
         Strategy.P2P_STAR,
         onEndpointFound: (String id, String userName, String serviceId) {
-          // called when an advertiser is found
+          nearbyService.addAdvertiserToList(Advertiser(
+            id: id,
+            username: userName,
+            serviceName: serviceId,
+          ));
         },
         onEndpointLost: (String id) {
           //called when an advertiser is lost (only if we weren't connected to it )
+          nearbyService.removeAdvertiserFromList(id);
         },
         serviceId: "com.rohankapur.hyperdrive", // uniquely identifies your app
       );
@@ -86,6 +93,7 @@ class _MainViewState extends State<MainView> {
     }
   }
 
+  /// Stops nearby device discovery
   stopDiscovery() {
     setState(() {
       this._showDiscoveryLoadingBar = false;
@@ -93,6 +101,7 @@ class _MainViewState extends State<MainView> {
     Nearby().stopDiscovery();
   }
 
+  /// Initiates nearby advertising - shows device as discoverable
   initiateAdvertising() async {
     setState(() {
       this._advertisingStatus = true;
@@ -122,6 +131,7 @@ class _MainViewState extends State<MainView> {
     }
   }
 
+  /// Stops nearby advertising
   stopAdvertising() async {
     print('Stopped Advertising...');
     setState(() {
@@ -130,6 +140,8 @@ class _MainViewState extends State<MainView> {
     Nearby().stopAdvertising();
   }
 
+
+  // MainView build widget functions below - No further documentation
   _buildDiscoveryProgressBar() {
     if (this._showDiscoveryLoadingBar) {
       return LinearProgressIndicator();
